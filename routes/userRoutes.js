@@ -4,7 +4,6 @@ const userController = require("../controllers/userController");
 
 router.get("/divisi", userController.getDivisi);
 router.post("/checkin", userController.checkIn); 
-router.get('/active', userController.getActive);
 router.post("/autofill", userController.autofill);
 router.post("/logout", userController.logout);
 router.get('/active', userController.getActive);
