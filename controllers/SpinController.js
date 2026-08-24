@@ -1,4 +1,4 @@
-const spinService = require('../services/spinService');
+const spinService = require('../services/SpinService');
 
 // ==========================================
 // MEMORI PANGGUNG (STATE PERSISTENCE)
