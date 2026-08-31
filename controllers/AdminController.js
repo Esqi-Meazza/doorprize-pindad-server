@@ -63,11 +63,75 @@ const resetEvent = async (req, res) => {
   }
 };
 
+// ==========================================
+// FITUR BARU: MANAJEMEN PESERTA (PAGINATION)
+// ==========================================
+
+const getDivisi = async (req, res) => {
+  try {
+    const data = await adminService.getDivisiList();
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const getPesertaPaged = async (req, res) => {
+  try {
+    const { page, limit, search, divisi } = req.query;
+    const result = await adminService.getPesertaPaged({ page, limit, search, divisi });
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const addPeserta = async (req, res) => {
+  try {
+    const { nip, nama_lengkap, tgl_lahir, id_divisi } = req.body;
+    if (!nip || !nama_lengkap || !id_divisi) {
+      return res.status(400).json({ success: false, error: "Semua field wajib diisi!" });
+    }await adminService.createPeserta({ nip, nama_lengkap, tgl_lahir, id_divisi });
+    res.status(201).json({ success: true, message: "Peserta berhasil ditambahkan" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const editPeserta = async (req, res) => {
+  try {
+    const { id_user } = req.params;
+    const { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang } = req.body;
+    await adminService.updatePeserta(id_user, { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang });
+    res.status(200).json({ success: true, message: "Data peserta berhasil diperbarui" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const resetAllPeserta = async (req, res) => {
+  try {
+    const { confirm_keyword } = req.body;
+    if (confirm_keyword !== "RESET-SEMUA") {
+      return res.status(400).json({ success: false, error: "Kata kunci konfirmasi salah!" });
+    }
+    await adminService.deleteAllPeserta();
+    res.status(200).json({ success: true, message: "Seluruh data peserta berhasil dihapus" });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 module.exports = {
   getStats,
   getWinnersAdmin,
   getPeserta,
   deletePeserta,
   getHadiah,
-  resetEvent
+  resetEvent,
+  getDivisi,
+  getPesertaPaged,
+  addPeserta,
+  editPeserta,
+  resetAllPeserta
 };

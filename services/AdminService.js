@@ -1,13 +1,11 @@
 const { queryAsync } = require("../config/db");
 
 const getDashboardStats = async () => {
-  // Tambahkan query stok_total & stok_sisa untuk hitung progress
   const qPeserta = "SELECT COUNT(*) AS totalPeserta FROM users";
   const qHadiah = "SELECT SUM(stok_total) AS totalHadiah, SUM(stok_sisa) AS sisaHadiah FROM hadiah";
   const qPemenang = "SELECT COUNT(id_user) AS totalPemenang FROM pemenang";
   const qSesi = "SELECT * FROM kelompok_hadiah WHERE status_sesi = 'active' LIMIT 1";
 
-  // Eksekusi 4 query paralel, tetap secepat kilat!
   const [resPeserta, resHadiah, resPemenang, resSesi] = await Promise.all([
     queryAsync(qPeserta),
     queryAsync(qHadiah),
@@ -15,7 +13,6 @@ const getDashboardStats = async () => {
     queryAsync(qSesi)
   ]);
 
-  // Kalkulasi data Hadiah
   const totalHadiah = resHadiah[0]?.totalHadiah || 0;
   const sisaHadiah = resHadiah[0]?.sisaHadiah || 0;
   const hadiahTerundi = totalHadiah - sisaHadiah;
@@ -39,7 +36,7 @@ const getLatestWinnersAdmin = async () => {
     JOIN hadiah h ON p.id_hadiah = h.id_hadiah
     ORDER BY p.id_pemenang DESC
     LIMIT 10
-  `; // Ubah ke DESC agar yang muncul adalah pemenang TERBARU
+  `;
   return await queryAsync(sql);
 };
 
@@ -86,11 +83,84 @@ const resetAllData = async () => {
   return { message: "Database berhasil di-reset" };
 };
 
+const getDivisiList = async () => {
+  const sql = "SELECT * FROM divisi ORDER BY nama_divisi ASC";
+  return await queryAsync(sql);
+};
+
+const getPesertaPaged = async ({ page = 1, limit = 10, search = '', divisi = '' }) => {
+  const offset = (Number(page) - 1) * Number(limit);
+  const params = [];
+  let whereClauses = [];
+
+  if (search) {
+    whereClauses.push("(u.nama_lengkap LIKE ? OR u.nip LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (divisi) {
+    whereClauses.push("u.id_divisi = ?");
+    params.push(divisi);
+  }
+
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const countSQL = `SELECT COUNT(*) AS total FROM users u ${whereSQL}`;
+  const countResult = await queryAsync(countSQL, params);
+  const totalItems = countResult[0]?.total || 0;
+  const totalPages = Math.ceil(totalItems / Number(limit)) || 1;
+
+  const dataSQL = `
+    SELECT u.id_user, u.nip, u.nama_lengkap, u.tgl_lahir, u.status_terdaftar, u.status_menang, u.id_divisi, d.nama_divisi 
+    FROM users u
+    LEFT JOIN divisi d ON u.id_divisi = d.id_divisi
+    ${whereSQL}
+    ORDER BY u.id_user DESC
+    LIMIT ? OFFSET ?
+  `;
+  const data = await queryAsync(dataSQL, [...params, Number(limit), Number(offset)]);
+
+  return {
+    data,
+    pagination: {
+      currentPage: Number(page),
+      limit: Number(limit),
+      totalItems,
+      totalPages
+    }
+  };
+};
+
+const createPeserta = async ({ nip, nama_lengkap, tgl_lahir, id_divisi }) => {
+  const tgl = tgl_lahir || null; 
+  const sql = "INSERT INTO users (nip, nama_lengkap, tgl_lahir, id_divisi, status_terdaftar, status_menang) VALUES (?, ?, ?, ?, 'belum', 'belum')";
+  return await queryAsync(sql, [nip, nama_lengkap, tgl, id_divisi]);
+};
+
+const updatePeserta = async (id_user, { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang }) => {
+  const sql = `
+    UPDATE users 
+    SET nip = ?, nama_lengkap = ?, tgl_lahir = ?, id_divisi = ?, status_terdaftar = ?, status_menang = ?
+    WHERE id_user = ?
+  `;
+  return await queryAsync(sql, [nip, nama_lengkap, id_divisi, status_terdaftar, status_menang, id_user]);
+};
+
+const deleteAllPeserta = async () => {
+  const sql = "DELETE FROM users";
+  return await queryAsync(sql);
+};
+
 module.exports = {
   getDashboardStats,
   getLatestWinnersAdmin,
   getAllPeserta,
   deletePesertaById,
   getSemuaHadiah,
-  resetAllData
+  resetAllData,
+  getDivisiList,
+  getPesertaPaged,
+  createPeserta,
+  updatePeserta,
+  deleteAllPeserta
 };
