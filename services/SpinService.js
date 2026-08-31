@@ -179,6 +179,38 @@ const undoSpin = async (id_kelompok) => {
     }
 };
 
+const setActiveSessionDB = async (id_kelompok) => {
+    const connection = await getConnection();
+    try {
+        await beginTransaction(connection);
+        await queryConn(connection, `UPDATE kelompok_hadiah SET status_sesi = 'pending' WHERE status_sesi = 'active'`);
+        
+        if (id_kelompok) {
+            await queryConn(connection, `UPDATE kelompok_hadiah SET status_sesi = 'active' WHERE id_kelompok = ?`, [id_kelompok]);
+        }
+        
+        await commitTransaction(connection);
+        connection.release();
+    } catch (error) {
+        await rollbackTransaction(connection);
+        connection.release();
+        throw error;
+    }
+};
+
+// FUNGSI BARU UNTUK FETCH DB ACTIVE SAAT RAM KOSONG
+const getActiveSessionFromDB = async () => {
+    const connection = await getConnection();
+    try {
+        const rows = await queryConn(connection, `SELECT * FROM kelompok_hadiah WHERE status_sesi = 'active' LIMIT 1`, []);
+        connection.release();
+        return rows[0] || null;
+    } catch (error) {
+        connection.release();
+        throw error;
+    }
+};
+
 const moveToNextSession = async (current_id) => {
     const connection = await getConnection();
     try {
@@ -189,27 +221,27 @@ const moveToNextSession = async (current_id) => {
 
         await beginTransaction(connection);
 
-        // 1. Kunci sesi saat ini sesuai nilai ENUM database
         await queryConn(connection, `UPDATE kelompok_hadiah SET status_sesi = 'complate' WHERE id_kelompok = ?`, [currentId]);
         
-        // 2. Cari sesi pending berikutnya (ID lebih besar)
         let nextSession = await queryConn(connection, 
             `SELECT * FROM kelompok_hadiah WHERE id_kelompok > ? AND status_sesi = 'pending' ORDER BY id_kelompok ASC LIMIT 1`, 
             [currentId]
         );
         
-        // 3. Circular: Jika habis, putar balik cari dari awal (ID 1 ke atas)
         if (nextSession.length === 0) {
             nextSession = await queryConn(connection, 
                 `SELECT * FROM kelompok_hadiah WHERE id_kelompok >= 1 AND status_sesi = 'pending' ORDER BY id_kelompok ASC LIMIT 1`, 
                 []
             );
         }
+
+        if (nextSession.length > 0) {
+            await queryConn(connection, `UPDATE kelompok_hadiah SET status_sesi = 'active' WHERE id_kelompok = ?`, [nextSession[0].id_kelompok]);
+        }
         
         await commitTransaction(connection);
         connection.release();
         
-        // Jika masih kosong, berarti SEMUA sesi sudah completed
         if (nextSession.length === 0) return null; 
         
         return {
@@ -236,4 +268,11 @@ const getAllSessions = async () => {
     }
 };
 
-module.exports = { executeSpin, undoSpin, moveToNextSession, getAllSessions };
+module.exports = { 
+    executeSpin, 
+    undoSpin, 
+    setActiveSessionDB, 
+    getActiveSessionFromDB, 
+    moveToNextSession, 
+    getAllSessions 
+};

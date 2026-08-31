@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const spinController = require('../controllers/spinController');
+const spinController = require('../controllers/SpinController.js');
 
 router.get('/current', spinController.getCurrentState);
 router.get('/sessions', spinController.getAllSessions); 

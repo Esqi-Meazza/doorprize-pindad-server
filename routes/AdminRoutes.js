@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const adminController = require("../controllers/adminController");
-const verifyAdminToken = require("../middlewares/authMiddleware");
+const adminController = require("../controllers/AdminController.js");
+const verifyAdminToken = require("../middlewares/AuthMiddleware.js");
 
 router.get("/stats", verifyAdminToken, adminController.getStats);
 router.get("/winners/latest", verifyAdminToken, adminController.getWinnersAdmin);

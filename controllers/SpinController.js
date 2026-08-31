@@ -1,38 +1,51 @@
 const spinService = require('../services/SpinService');
 
-// ==========================================
-// MEMORI PANGGUNG (STATE PERSISTENCE)
-// ==========================================
 let currentStageState = {
     appState: 'STANDBY', 
     sessionData: null,   
     winners: []          
 };
 
-const getCurrentState = (req, res) => {
-    res.status(200).json({ data: currentStageState });
+// PERUBAHAN: JADI ASYNC & FALLBACK KE DB JIKA RAM KOSONG
+const getCurrentState = async (req, res) => {
+    try {
+        if (!currentStageState.sessionData) {
+            const activeSession = await spinService.getActiveSessionFromDB();
+            if (activeSession) {
+                currentStageState.sessionData = {
+                    id_kelompok: activeSession.id_kelompok,
+                    title: activeSession.nama_kelompok,
+                    jumlah_slot: activeSession.target_jumlah_pemenang,
+                    mode: activeSession.tipe_event
+                };
+            }
+        }
+        res.status(200).json({ data: currentStageState });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
-// ==========================================
-// FITUR BARU: ADMIN MENGUBAH SESI MANUAL
-// ==========================================
-const setSession = (req, res) => {
+const setSession = async (req, res) => {
     const { id_kelompok, nama_kelompok, jumlah_slot, mode } = req.body;
     const io = req.app.get('io');
     
-    currentStageState = {
-        appState: 'STANDBY',
-        sessionData: { id_kelompok, title: nama_kelompok, jumlah_slot, mode },
-        winners: []
-    };
+    try {
+        await spinService.setActiveSessionDB(id_kelompok);
 
-    io.emit('SESSION_CHANGED', currentStageState.sessionData);
-    res.status(200).json({ message: "Sesi panggung berhasil diubah", data: currentStageState.sessionData });
+        currentStageState = {
+            appState: 'STANDBY',
+            sessionData: { id_kelompok, title: nama_kelompok, jumlah_slot, mode },
+            winners: []
+        };
+
+        io.emit('SESSION_CHANGED', currentStageState.sessionData);
+        res.status(200).json({ message: "Sesi panggung berhasil diubah", data: currentStageState.sessionData });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
-// ==========================================
-// FITUR BARU: AUTO-NEXT (CIRCULAR QUEUE)
-// ==========================================
 const nextSession = async (req, res) => {
     try {
         const id_kelompok = Number(req.body?.id_kelompok);
@@ -41,7 +54,6 @@ const nextSession = async (req, res) => {
         }
         const io = req.app.get('io');
         
-        // Panggil service circular queue
         const nextData = await spinService.moveToNextSession(id_kelompok);
         
         if (nextData) {
@@ -58,7 +70,6 @@ const nextSession = async (req, res) => {
             io.emit('SESSION_CHANGED', currentStageState.sessionData);
             res.status(200).json({ message: "Sesi selanjutnya aktif", data: currentStageState.sessionData });
         } else {
-            // Skenario jika 18 Sesi sudah beres semua
             currentStageState = { appState: 'STANDBY', sessionData: null, winners: [] };
             io.emit('ALL_COMPLETED');
             res.status(200).json({ message: "Semua sesi telah selesai", data: null });
@@ -127,11 +138,16 @@ const respinSpin = async (req, res) => {
     }
 };
 
-const clearStage = (req, res) => {
-    currentStageState = { appState: 'STANDBY', sessionData: null, winners: [] };
-    const io = req.app.get('io');
-    io.emit('STAGE_CLEARED'); 
-    res.status(200).json({ message: "Panggung dikosongkan" });
+const clearStage = async (req, res) => {
+    try {
+        await spinService.setActiveSessionDB(null);
+        currentStageState = { appState: 'STANDBY', sessionData: null, winners: [] };
+        const io = req.app.get('io');
+        io.emit('STAGE_CLEARED'); 
+        res.status(200).json({ message: "Panggung dikosongkan" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
 };
 
 const getAllSessions = async (req, res) => {
