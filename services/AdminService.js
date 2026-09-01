@@ -56,7 +56,7 @@ const deletePesertaById = async (id) => {
 };
 
 const getSemuaHadiah = async () => {
-  const sql = "SELECT id_hadiah, nama_hadiah, tipe, stok FROM hadiah ORDER BY tipe ASC, id_hadiah ASC";
+  const sql = "SELECT id_hadiah, nama_hadiah, tipe, stok_sisa AS stok FROM hadiah ORDER BY tipe ASC, id_hadiah ASC";
   return await queryAsync(sql);
 };
 
@@ -160,6 +160,86 @@ const deleteAllPeserta = async () => {
   return await queryAsync(sql);
 };
 
+// ==========================================
+// FITUR BARU: MANAJEMEN PEMENANG
+// ==========================================
+
+const getPemenangPaged = async ({ page = 1, limit = 10, search = '', hadiah = '' }) => {
+  const offset = (Number(page) - 1) * Number(limit);
+  const params = [];
+  let whereClauses = [];
+
+  // Filter Search (NIP / Nama)
+  if (search) {
+    whereClauses.push("(u.nama_lengkap LIKE ? OR u.nip LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  // Filter Hadiah
+  if (hadiah) {
+    whereClauses.push("p.id_hadiah = ?");
+    params.push(hadiah);
+  }
+
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  // Query 1: Total Data
+  const countSQL = `
+    SELECT COUNT(*) AS total 
+    FROM pemenang p 
+    JOIN users u ON p.id_user = u.id_user 
+    ${whereSQL}
+  `;
+  const countResult = await queryAsync(countSQL, params);
+  const totalItems = countResult[0]?.total || 0;
+  const totalPages = Math.ceil(totalItems / Number(limit)) || 1;
+
+  // Query 2: Data Terpotong (Sesuai kolom db pemenang: id_pemenang, id_user, id_hadiah, id_kelompok, mode_undian)
+  const dataSQL = `
+    SELECT p.id_pemenang, p.mode_undian, p.id_kelompok,
+            u.id_user, u.nip, u.nama_lengkap, u.tgl_lahir,
+            d.nama_divisi,
+            h.id_hadiah, h.nama_hadiah
+    FROM pemenang p
+    JOIN users u ON p.id_user = u.id_user
+    LEFT JOIN divisi d ON u.id_divisi = d.id_divisi
+    JOIN hadiah h ON p.id_hadiah = h.id_hadiah
+    ${whereSQL}
+    ORDER BY p.id_pemenang DESC
+    LIMIT ? OFFSET ?
+  `;
+  const data = await queryAsync(dataSQL, [...params, Number(limit), Number(offset)]);
+
+  return {
+    data,
+    pagination: {
+      currentPage: Number(page),
+      limit: Number(limit),
+      totalItems,
+      totalPages
+    }
+  };
+};
+
+const diskualifikasiPemenang = async (id_pemenang) => {
+  // 1. Dapatkan id_user dan id_hadiah dari tiket kemenangan yang akan dihapus
+  const checkSQL = "SELECT id_user, id_hadiah FROM pemenang WHERE id_pemenang = ?";
+  const target = await queryAsync(checkSQL, [id_pemenang]);
+
+  if (target.length === 0) {
+    throw new Error("Data pemenang tidak ditemukan di database");
+  }
+
+  const { id_user, id_hadiah } = target[0];
+
+  // 2. Eksekusi 3 Query Krusial (Hapus Pemenang, Reset Status User, Kembalikan Stok Hadiah)
+  await queryAsync("DELETE FROM pemenang WHERE id_pemenang = ?", [id_pemenang]);
+  await queryAsync("UPDATE users SET status_menang = 'belum' WHERE id_user = ?", [id_user]);
+  await queryAsync("UPDATE hadiah SET stok_sisa = stok_sisa + 1 WHERE id_hadiah = ?", [id_hadiah]);
+
+  return { message: "Pemenang didiskualifikasi. Status peserta di-reset dan stok hadiah dikembalikan!" };
+};
+
 module.exports = {
   getDashboardStats,
   getLatestWinnersAdmin,
@@ -171,5 +251,7 @@ module.exports = {
   getPesertaPaged,
   createPeserta,
   updatePeserta,
-  deleteAllPeserta
+  deleteAllPeserta,
+  getPemenangPaged,
+  diskualifikasiPemenang
 };

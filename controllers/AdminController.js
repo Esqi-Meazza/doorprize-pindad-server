@@ -135,6 +135,34 @@ const resetAllPeserta = async (req, res) => {
   }
 };
 
+// ==========================================
+// FITUR BARU: MANAJEMEN PEMENANG
+// ==========================================
+
+const getPemenangPaged = async (req, res) => {
+  try {
+    const { page, limit, search, hadiah } = req.query;
+    const result = await adminService.getPemenangPaged({ page, limit, search, hadiah });
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const diskualifikasiPemenang = async (req, res) => {
+  try {
+    const { id_pemenang } = req.params;
+    if (!id_pemenang) {
+      return res.status(400).json({ success: false, error: "ID Pemenang tidak valid" });
+    }
+    
+    const result = await adminService.diskualifikasiPemenang(id_pemenang);
+    res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
 module.exports = {
   getStats,
   getWinnersAdmin,
@@ -146,5 +174,7 @@ module.exports = {
   getPesertaPaged,
   addPeserta,
   editPeserta,
-  resetAllPeserta
+  resetAllPeserta,
+  getPemenangPaged,
+  diskualifikasiPemenang
 };
