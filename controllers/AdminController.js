@@ -45,15 +45,6 @@ const deletePeserta = async (req, res) => {
   }
 };
 
-const getHadiah = async (req, res) => {
-  try {
-    const hadiah = await adminService.getSemuaHadiah();
-    res.status(200).json({ success: true, data: hadiah });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-};
-
 const resetEvent = async (req, res) => {
   try {
     await adminService.resetAllData();
@@ -163,12 +154,63 @@ const diskualifikasiPemenang = async (req, res) => {
   }
 };
 
+// ==========================================
+// FITUR: MANAJEMEN HADIAH
+// ==========================================
+
+const getHadiah = async (req, res) => {
+  try {
+    const hadiah = await adminService.getSemuaHadiah();
+    res.status(200).json({ success: true, data: hadiah });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const getHadiahPaged = async (req, res) => {
+  try {
+    const { page, limit, search, tipe } = req.query;
+    const result = await adminService.getHadiahPaged({ page, limit, search, tipe });
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const tambahHadiah = async (req, res) => {
+  try {
+    const result = await adminService.tambahHadiah(req.body);
+    res.status(201).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const editHadiah = async (req, res) => {
+  try {
+    const { id_hadiah } = req.params;
+    const result = await adminService.editHadiah(id_hadiah, req.body);
+    res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message }); // 400 untuk validasi stok minus
+  }
+};
+
+const hapusHadiah = async (req, res) => {
+  try {
+    const { id_hadiah } = req.params;
+    const result = await adminService.hapusHadiah(id_hadiah);
+    res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message }); // 400 untuk proteksi foreign key
+  }
+};
+
 module.exports = {
   getStats,
   getWinnersAdmin,
   getPeserta,
   deletePeserta,
-  getHadiah,
   resetEvent,
   getDivisi,
   getPesertaPaged,
@@ -176,5 +218,10 @@ module.exports = {
   editPeserta,
   resetAllPeserta,
   getPemenangPaged,
-  diskualifikasiPemenang
+  diskualifikasiPemenang,
+  getHadiah,
+  getHadiahPaged,
+  tambahHadiah,
+  editHadiah,
+  hapusHadiah
 };

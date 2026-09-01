@@ -55,11 +55,6 @@ const deletePesertaById = async (id) => {
   return await queryAsync(sql, [id]);
 };
 
-const getSemuaHadiah = async () => {
-  const sql = "SELECT id_hadiah, nama_hadiah, tipe, stok_sisa AS stok FROM hadiah ORDER BY tipe ASC, id_hadiah ASC";
-  return await queryAsync(sql);
-};
-
 const resetAllData = async () => {
   await queryAsync("DELETE FROM pemenang");
 
@@ -240,12 +235,99 @@ const diskualifikasiPemenang = async (id_pemenang) => {
   return { message: "Pemenang didiskualifikasi. Status peserta di-reset dan stok hadiah dikembalikan!" };
 };
 
+// ==========================================
+// FITUR: MANAJEMEN HADIAH
+// ==========================================
+
+const getSemuaHadiah = async () => {
+  const sql = "SELECT id_hadiah, nama_hadiah, tipe, stok_sisa AS stok FROM hadiah ORDER BY tipe ASC, id_hadiah ASC";
+  return await queryAsync(sql);
+};
+
+const getHadiahPaged = async ({ page = 1, limit = 10, search = '', tipe = '' }) => {
+  const offset = (Number(page) - 1) * Number(limit);
+  const params = [];
+  let whereClauses = [];
+
+  if (search) {
+    whereClauses.push("nama_hadiah LIKE ?");
+    params.push(`%${search}%`);
+  }
+  if (tipe) {
+    whereClauses.push("tipe = ?");
+    params.push(tipe);
+  }
+
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const countSQL = `SELECT COUNT(*) AS total FROM hadiah ${whereSQL}`;
+  const countResult = await queryAsync(countSQL, params);
+  const totalItems = countResult[0]?.total || 0;
+  const totalPages = Math.ceil(totalItems / Number(limit)) || 1;
+
+  const dataSQL = `
+    SELECT id_hadiah, id_kelompok, nama_hadiah, tipe, stok_total, stok_sisa 
+    FROM hadiah 
+    ${whereSQL}
+    ORDER BY id_hadiah DESC
+    LIMIT ? OFFSET ?
+  `;
+  const data = await queryAsync(dataSQL, [...params, Number(limit), Number(offset)]);
+
+  return {
+    data,
+    pagination: { currentPage: Number(page), limit: Number(limit), totalItems, totalPages }
+  };
+};
+
+const tambahHadiah = async ({ id_kelompok, nama_hadiah, tipe, stok_total }) => {
+  // Saat hadiah baru dibuat, stok sisa otomatis sama dengan stok total awal
+  const sql = `INSERT INTO hadiah (id_kelompok, nama_hadiah, tipe, stok_total, stok_sisa) VALUES (?, ?, ?, ?, ?)`;
+  await queryAsync(sql, [id_kelompok || null, nama_hadiah, tipe, stok_total, stok_total]);
+  return { message: "Hadiah berhasil ditambahkan!" };
+};
+
+const editHadiah = async (id_hadiah, { id_kelompok, nama_hadiah, tipe, stok_total }) => {
+  // 1. Ambil data stok lama
+  const cekSql = `SELECT stok_total, stok_sisa FROM hadiah WHERE id_hadiah = ?`;
+  const hadiahLama = await queryAsync(cekSql, [id_hadiah]);
+  
+  if (hadiahLama.length === 0) throw new Error("Hadiah tidak ditemukan di database.");
+  
+  const { stok_total: old_total, stok_sisa: old_sisa } = hadiahLama[0];
+  
+  // 2. Kalkulasi jumlah hadiah yang sudah dimenangkan peserta
+  const jumlahDimenangkan = old_total - old_sisa;
+  
+  // 3. Hitung stok sisa yang baru
+  const new_stok_sisa = stok_total - jumlahDimenangkan;
+
+  // 4. Validasi: Jangan biarkan admin memasukkan stok total lebih kecil dari yang sudah dibagikan
+  if (new_stok_sisa < 0) {
+    throw new Error(`Stok total tidak boleh lebih kecil dari jumlah yang sudah dimenangkan (${jumlahDimenangkan} item).`);
+  }
+
+  const sql = `UPDATE hadiah SET id_kelompok = ?, nama_hadiah = ?, tipe = ?, stok_total = ?, stok_sisa = ? WHERE id_hadiah = ?`;
+  await queryAsync(sql, [id_kelompok || null, nama_hadiah, tipe, stok_total, new_stok_sisa, id_hadiah]);
+  return { message: "Data hadiah berhasil diperbarui!" };
+};
+
+const hapusHadiah = async (id_hadiah) => {
+  // Proteksi Integritas Data
+  const cekPemenang = await queryAsync(`SELECT COUNT(*) as terpakai FROM pemenang WHERE id_hadiah = ?`, [id_hadiah]);
+  if (cekPemenang[0].terpakai > 0) {
+    throw new Error("Gagal menghapus: Sudah ada peserta yang memenangkan hadiah ini. Harap diskualifikasi pemenang terlebih dahulu jika ingin menghapus.");
+  }
+
+  await queryAsync(`DELETE FROM hadiah WHERE id_hadiah = ?`, [id_hadiah]);
+  return { message: "Hadiah berhasil dihapus!" };
+};
+
 module.exports = {
   getDashboardStats,
   getLatestWinnersAdmin,
   getAllPeserta,
   deletePesertaById,
-  getSemuaHadiah,
   resetAllData,
   getDivisiList,
   getPesertaPaged,
@@ -253,5 +335,10 @@ module.exports = {
   updatePeserta,
   deleteAllPeserta,
   getPemenangPaged,
-  diskualifikasiPemenang
+  diskualifikasiPemenang,
+  getSemuaHadiah,
+  getHadiahPaged,
+  tambahHadiah,
+  editHadiah,
+  hapusHadiah
 };
