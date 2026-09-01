@@ -137,13 +137,22 @@ const createPeserta = async ({ nip, nama_lengkap, tgl_lahir, id_divisi }) => {
   return await queryAsync(sql, [nip, nama_lengkap, tgl, id_divisi]);
 };
 
-const updatePeserta = async (id_user, { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang }) => {
+const updatePeserta = async (id_user, { nip, nama_lengkap, tgl_lahir, id_divisi, status_terdaftar, status_menang }) => {
   const sql = `
     UPDATE users 
     SET nip = ?, nama_lengkap = ?, tgl_lahir = ?, id_divisi = ?, status_terdaftar = ?, status_menang = ?
     WHERE id_user = ?
   `;
-  return await queryAsync(sql, [nip, nama_lengkap, id_divisi, status_terdaftar, status_menang, id_user]);
+
+  return await queryAsync(sql, [
+    nip,
+    nama_lengkap,
+    tgl_lahir || null,
+    id_divisi,
+    status_terdaftar,
+    status_menang,
+    id_user,
+  ]);
 };
 
 const deleteAllPeserta = async () => {

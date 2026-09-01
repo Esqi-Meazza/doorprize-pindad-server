@@ -101,8 +101,21 @@ const addPeserta = async (req, res) => {
 const editPeserta = async (req, res) => {
   try {
     const { id_user } = req.params;
-    const { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang } = req.body;
-    await adminService.updatePeserta(id_user, { nip, nama_lengkap, id_divisi, status_terdaftar, status_menang });
+    const { nip, nama_lengkap, tgl_lahir, id_divisi, status_terdaftar, status_menang } = req.body;
+
+    if (!nip || !nama_lengkap || !id_divisi) {
+      return res.status(400).json({ success: false, error: "NIP, nama, dan divisi wajib diisi" });
+    }
+
+    await adminService.updatePeserta(id_user, {
+      nip,
+      nama_lengkap,
+      tgl_lahir,
+      id_divisi,
+      status_terdaftar,
+      status_menang,
+    });
+
     res.status(200).json({ success: true, message: "Data peserta berhasil diperbarui" });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
