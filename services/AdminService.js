@@ -249,27 +249,36 @@ const getHadiahPaged = async ({ page = 1, limit = 10, search = '', tipe = '' }) 
   const params = [];
   let whereClauses = [];
 
+  // Gunakan alias 'h' untuk tabel hadiah agar tidak ambigu
   if (search) {
-    whereClauses.push("nama_hadiah LIKE ?");
+    whereClauses.push("h.nama_hadiah LIKE ?");
     params.push(`%${search}%`);
   }
   if (tipe) {
-    whereClauses.push("tipe = ?");
+    whereClauses.push("h.tipe = ?");
     params.push(tipe);
   }
 
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
 
-  const countSQL = `SELECT COUNT(*) AS total FROM hadiah ${whereSQL}`;
+  const countSQL = `
+    SELECT COUNT(*) AS total 
+    FROM hadiah h
+    LEFT JOIN kelompok_hadiah kh ON h.id_kelompok = kh.id_kelompok
+    ${whereSQL}
+  `;
   const countResult = await queryAsync(countSQL, params);
   const totalItems = countResult[0]?.total || 0;
   const totalPages = Math.ceil(totalItems / Number(limit)) || 1;
 
   const dataSQL = `
-    SELECT id_hadiah, id_kelompok, nama_hadiah, tipe, stok_total, stok_sisa 
-    FROM hadiah 
+    SELECT 
+      h.id_hadiah, h.id_kelompok, h.nama_hadiah, h.tipe, h.stok_total, h.stok_sisa,
+      kh.nama_kelompok
+    FROM hadiah h 
+    LEFT JOIN kelompok_hadiah kh ON h.id_kelompok = kh.id_kelompok
     ${whereSQL}
-    ORDER BY id_hadiah DESC
+    ORDER BY h.id_hadiah DESC
     LIMIT ? OFFSET ?
   `;
   const data = await queryAsync(dataSQL, [...params, Number(limit), Number(offset)]);
