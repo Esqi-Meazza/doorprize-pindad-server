@@ -206,6 +206,58 @@ const hapusHadiah = async (req, res) => {
   }
 };
 
+// ==========================================
+// FITUR: MANAJEMEN KELOMPOK HADIAH
+// ==========================================
+
+const getSemuaKelompok = async (req, res) => {
+  try {
+    const data = await adminService.getSemuaKelompok();
+    res.status(200).json({ success: true, data });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const getKelompokPaged = async (req, res) => {
+  try {
+    const { page, limit, search, tipe, status } = req.query;
+    const result = await adminService.getKelompokPaged({ page, limit, search, tipe, status });
+    res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const tambahKelompok = async (req, res) => {
+  try {
+    const result = await adminService.tambahKelompok(req.body);
+    res.status(201).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+};
+
+const editKelompok = async (req, res) => {
+  try {
+    const { id_kelompok } = req.params;
+    const result = await adminService.editKelompok(id_kelompok, req.body);
+    res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+const hapusKelompok = async (req, res) => {
+  try {
+    const { id_kelompok } = req.params;
+    const result = await adminService.hapusKelompok(id_kelompok);
+    res.status(200).json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
 module.exports = {
   getStats,
   getWinnersAdmin,
@@ -223,5 +275,10 @@ module.exports = {
   getHadiahPaged,
   tambahHadiah,
   editHadiah,
-  hapusHadiah
+  hapusHadiah,
+  getSemuaKelompok,
+  getKelompokPaged,
+  tambahKelompok,
+  editKelompok,
+  hapusKelompok
 };

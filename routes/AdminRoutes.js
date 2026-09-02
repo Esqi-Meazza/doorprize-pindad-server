@@ -23,6 +23,12 @@ router.get("/hadiah-paged", verifyAdminToken, adminController.getHadiahPaged); /
 router.post("/hadiah", verifyAdminToken, adminController.tambahHadiah);
 router.put("/hadiah/:id_hadiah", verifyAdminToken, adminController.editHadiah);
 router.delete("/hadiah/:id_hadiah", verifyAdminToken, adminController.hapusHadiah);
+// Kelompok Hadiah
+router.get("/kelompok", verifyAdminToken, adminController.getSemuaKelompok);
+router.get("/kelompok-paged", verifyAdminToken, adminController.getKelompokPaged);
+router.post("/kelompok", verifyAdminToken, adminController.tambahKelompok);
+router.put("/kelompok/:id_kelompok", verifyAdminToken, adminController.editKelompok);
+router.delete("/kelompok/:id_kelompok", verifyAdminToken, adminController.hapusKelompok);
 // setting
 router.post("/resetevent", verifyAdminToken, adminController.resetEvent);
 

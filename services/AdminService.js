@@ -323,6 +323,77 @@ const hapusHadiah = async (id_hadiah) => {
   return { message: "Hadiah berhasil dihapus!" };
 };
 
+// ==========================================
+// FITUR: MANAJEMEN KELOMPOK HADIAH
+// ==========================================
+
+const getSemuaKelompok = async () => {
+  const sql = "SELECT * FROM kelompok_hadiah ORDER BY urutan_sesi ASC";
+  return await queryAsync(sql);
+};
+
+const getKelompokPaged = async ({ page = 1, limit = 10, search = '', tipe = '', status = '' }) => {
+  const offset = (Number(page) - 1) * Number(limit);
+  const params = [];
+  let whereClauses = [];
+
+  if (search) {
+    whereClauses.push("nama_kelompok LIKE ?");
+    params.push(`%${search}%`);
+  }
+  if (tipe) {
+    whereClauses.push("tipe_event = ?");
+    params.push(tipe);
+  }
+  if (status) {
+    whereClauses.push("status_sesi = ?");
+    params.push(status);
+  }
+
+  const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
+
+  const countSQL = `SELECT COUNT(*) AS total FROM kelompok_hadiah ${whereSQL}`;
+  const countResult = await queryAsync(countSQL, params);
+  const totalItems = countResult[0]?.total || 0;
+  const totalPages = Math.ceil(totalItems / Number(limit)) || 1;
+
+  const dataSQL = `
+    SELECT * FROM kelompok_hadiah 
+    ${whereSQL}
+    ORDER BY urutan_sesi ASC, id_kelompok DESC
+    LIMIT ? OFFSET ?
+  `;
+  const data = await queryAsync(dataSQL, [...params, Number(limit), Number(offset)]);
+
+  return {
+    data,
+    pagination: { currentPage: Number(page), limit: Number(limit), totalItems, totalPages }
+  };
+};
+
+const tambahKelompok = async ({ nama_kelompok, tipe_event, urutan_sesi, target_jumlah_pemenang, status_sesi }) => {
+  const sql = `INSERT INTO kelompok_hadiah (nama_kelompok, tipe_event, urutan_sesi, target_jumlah_pemenang, status_sesi) VALUES (?, ?, ?, ?, 'pending')`;
+  await queryAsync(sql, [nama_kelompok, tipe_event, urutan_sesi, target_jumlah_pemenang]);
+  return { message: "Kelompok hadiah berhasil ditambahkan!" };
+};
+
+const editKelompok = async (id_kelompok, { nama_kelompok, tipe_event, urutan_sesi, target_jumlah_pemenang, status_sesi }) => {
+  const sql = `UPDATE kelompok_hadiah SET nama_kelompok = ?, tipe_event = ?, urutan_sesi = ?, target_jumlah_pemenang = ? WHERE id_kelompok = ?`;
+  await queryAsync(sql, [nama_kelompok, tipe_event, urutan_sesi, target_jumlah_pemenang, id_kelompok]);
+  return { message: "Data kelompok hadiah berhasil diperbarui!" };
+};
+
+const hapusKelompok = async (id_kelompok) => {
+  // Proteksi Foreign Key: Pastikan tidak ada hadiah yang masih terikat di kelompok ini
+  const cekHadiah = await queryAsync(`SELECT COUNT(*) as terpakai FROM hadiah WHERE id_kelompok = ?`, [id_kelompok]);
+  if (cekHadiah[0].terpakai > 0) {
+    throw new Error("Gagal menghapus: Masih ada Hadiah yang terikat pada kelompok ini. Harap ubah/hapus hadiah tersebut terlebih dahulu.");
+  }
+
+  await queryAsync(`DELETE FROM kelompok_hadiah WHERE id_kelompok = ?`, [id_kelompok]);
+  return { message: "Kelompok hadiah berhasil dihapus!" };
+};
+
 module.exports = {
   getDashboardStats,
   getLatestWinnersAdmin,
@@ -340,5 +411,10 @@ module.exports = {
   getHadiahPaged,
   tambahHadiah,
   editHadiah,
-  hapusHadiah
+  hapusHadiah,
+  getSemuaKelompok,
+  getKelompokPaged,
+  tambahKelompok,
+  editKelompok,
+  hapusKelompok
 };
