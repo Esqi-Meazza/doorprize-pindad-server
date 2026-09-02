@@ -72,10 +72,9 @@ const resetAllData = async () => {
   await queryAsync(`
     UPDATE kelompok_hadiah 
     SET status_sesi = 'pending' 
-    WHERE status_sesi = 'complate' 
   `);
 
-  return { message: "Database berhasil di-reset" };
+  return { message: "Event berhasil di-reset dari nol!" };
 };
 
 const getDivisiList = async () => {
