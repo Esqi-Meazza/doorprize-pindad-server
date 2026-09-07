@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = "secret"; // Sebaiknya pindahkan ke file .env nanti
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const verifyAdminToken = (req, res, next) => {
   const authHeader = req.headers['authorization'];

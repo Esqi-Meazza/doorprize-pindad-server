@@ -2,7 +2,7 @@ const { queryAsync } = require("../config/db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const JWT_SECRET = "secret";
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const loginAdmin = async (username, password) => {
   const sql = "SELECT * FROM admin WHERE username = ?";
