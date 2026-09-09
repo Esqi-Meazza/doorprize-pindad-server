@@ -86,19 +86,16 @@ const getPesertaPaged = async ({ page = 1, limit = 10, search = '', divisi = '' 
   const offset = (Number(page) - 1) * Number(limit);
   const params = [];
   let whereClauses = [];
-
   if (search) {
     whereClauses.push("(u.nama_lengkap LIKE ? OR u.nip LIKE ?)");
     params.push(`%${search}%`, `%${search}%`);
   }
-
   if (divisi) {
     whereClauses.push("u.id_divisi = ?");
     params.push(divisi);
   }
 
   const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(" AND ")}` : "";
-
   const countSQL = `SELECT COUNT(*) AS total FROM users u ${whereSQL}`;
   const countResult = await queryAsync(countSQL, params);
   const totalItems = countResult[0]?.total || 0;
@@ -137,7 +134,6 @@ const updatePeserta = async (id_user, { nip, nama_lengkap, tgl_lahir, id_divisi,
     SET nip = ?, nama_lengkap = ?, tgl_lahir = ?, id_divisi = ?, status_terdaftar = ?, status_menang = ?
     WHERE id_user = ?
   `;
-
   return await queryAsync(sql, [
     nip,
     nama_lengkap,
@@ -148,7 +144,6 @@ const updatePeserta = async (id_user, { nip, nama_lengkap, tgl_lahir, id_divisi,
     id_user,
   ]);
 };
-
 const deleteAllPeserta = async () => {
   const sql = "DELETE FROM users";
   return await queryAsync(sql);

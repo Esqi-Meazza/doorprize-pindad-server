@@ -63,58 +63,45 @@ const pickPrizesWeighted = (availablePrizes, neededCount) => {
 // ==========================================
 const executeSpin = async (id_kelompok) => {
     const connection = await getConnection(); 
-
     try {
         await beginTransaction(connection); 
-        
         const sesi = await queryConn(connection, 
             `SELECT target_jumlah_pemenang, tipe_event FROM kelompok_hadiah WHERE id_kelompok = ? FOR UPDATE`, 
             [id_kelompok]
         );
         if (!sesi || sesi.length === 0) throw new Error("Sesi tidak ditemukan");
-
         const prizes = await queryConn(connection, 
             `SELECT id_hadiah, nama_hadiah, tipe, stok_sisa FROM hadiah WHERE id_kelompok = ? AND stok_sisa > 0 FOR UPDATE`,
             [id_kelompok]
         );
-        
         const totalSisaStok = prizes.reduce((sum, p) => sum + p.stok_sisa, 0);
         if (totalSisaStok === 0) throw new Error("Stok hadiah untuk sesi ini sudah habis!");
-
         const jumlahPemenang = Math.min(sesi[0].target_jumlah_pemenang, totalSisaStok);
-
         const users = await queryConn(connection, 
             `SELECT id_user, nama_lengkap, id_divisi FROM users 
-             WHERE status_terdaftar = 'sudah' AND status_menang = 'belum' 
-             ORDER BY RAND() LIMIT ?`,
+                WHERE status_terdaftar = 'sudah' AND status_menang = 'belum' 
+                ORDER BY RAND() LIMIT ?`,
             [jumlahPemenang]
         );
-
         if (users.length === 0) throw new Error("Tidak ada peserta yang memenuhi syarat");
-
         const finalWinnerCount = Math.min(jumlahPemenang, users.length);
         const assignedPrizes = pickPrizesWeighted(prizes, finalWinnerCount);
         const hasilPemenang = [];
-
         for (let i = 0; i < finalWinnerCount; i++) {
             const user = users[i];
             const prize = assignedPrizes[i];
-
             await queryConn(connection, 
                 `INSERT INTO pemenang (id_user, id_hadiah, id_kelompok, mode_undian) VALUES (?, ?, ?, ?)`,
                 [user.id_user, prize.id_hadiah, id_kelompok, sesi[0].tipe_event]
             );
-
             await queryConn(connection, 
                 `UPDATE hadiah SET stok_sisa = stok_sisa - 1 WHERE id_hadiah = ?`,
                 [prize.id_hadiah]
             );
-
             await queryConn(connection, 
                 `UPDATE users SET status_menang = 'sudah' WHERE id_user = ?`,
                 [user.id_user]
             );
-
             hasilPemenang.push({
                 id_user: user.id_user,
                 nama_lengkap: user.nama_lengkap,
@@ -122,16 +109,13 @@ const executeSpin = async (id_kelompok) => {
                 nama_hadiah: prize.nama_hadiah
             });
         }
-
         await commitTransaction(connection);
-        connection.release(); 
-        
+        connection.release();  
         return {
             mode: sesi[0].tipe_event,
             jumlah_slot: finalWinnerCount,
             winners: hasilPemenang
         };
-
     } catch (error) {
         await rollbackTransaction(connection); 
         connection.release();
