@@ -6,6 +6,10 @@ server/
 ├── package.json
 ├── package-lock.json
 ├── server.js
+├── migrations/
+│   └── 001_performance_indexes.sql
+├── scripts/
+│   └── migrate.js
 ├── config/
 │   └── db.js
 ├── controllers/
@@ -52,6 +56,8 @@ server/
 
 ### 4) Layer infrastruktur & keamanan
 - `config/db.js` — koneksi pool MySQL dan helper `queryAsync` untuk menjalankan query ke database.
+- `migrations/001_performance_indexes.sql` — index produksi untuk lookup peserta, eligibility undian, hadiah, pemenang, dan urutan sesi; jalankan sekali pada database target.
+- `scripts/migrate.js` — runner migration idempoten yang bisa dijalankan dengan `npm run db:migrate`.
 - `middlewares/authMiddleware.js` — middleware autentikasi untuk memverifikasi Bearer token admin sebelum request masuk ke endpoint sensitif.
 - `sockets/spinSocket.js` — event listener Socket.IO dasar untuk koneksi client ke realtime panggung.
 

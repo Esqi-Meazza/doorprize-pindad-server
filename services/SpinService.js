@@ -190,6 +190,7 @@ const getActiveSessionFromDB = async () => {
         connection.release();
         return rows[0] || null;
     } catch (error) {
+        await rollbackTransaction(connection);
         connection.release();
         throw error;
     }
