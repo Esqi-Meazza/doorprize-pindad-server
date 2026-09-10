@@ -51,8 +51,20 @@ const cariPegawai = async (nip, tgl_lahir) => {
 };
 
 const getActiveParticipants = async () => {
+  const countResult = await queryAsync(
+    "SELECT COUNT(*) AS total FROM users WHERE status_terdaftar = 'sudah'"
+  );
+  const total = Number(countResult[0]?.total || 0);
+  const limit = Math.min(total, 150);
+  const offset = total > limit ? Math.floor(Math.random() * (total - limit + 1)) : 0;
+
   return await queryAsync(
-    "SELECT nama_lengkap FROM users WHERE status_terdaftar = 'sudah' ORDER BY RAND() LIMIT 150"
+    `SELECT nama_lengkap
+     FROM users
+     WHERE status_terdaftar = 'sudah'
+     ORDER BY id_user
+     LIMIT ? OFFSET ?`,
+    [limit, offset]
   );
 };
 

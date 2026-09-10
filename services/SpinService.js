@@ -58,6 +58,45 @@ const pickPrizesWeighted = (availablePrizes, neededCount) => {
     return selectedPrizes;
 };
 
+const pickEligibleUsers = async (connection, neededCount) => {
+    const selectedUsers = [];
+
+    for (let index = 0; index < neededCount; index += 1) {
+        const excludedIds = selectedUsers.map((user) => user.id_user);
+        const exclusionSQL = excludedIds.length
+            ? ` AND id_user NOT IN (${excludedIds.map(() => '?').join(', ')})`
+            : '';
+        const countResult = await queryConn(
+            connection,
+            `SELECT COUNT(*) AS total
+             FROM users
+             WHERE status_terdaftar = 'sudah'
+               AND status_menang = 'belum'${exclusionSQL}`,
+            excludedIds,
+        );
+        const availableCount = Number(countResult[0]?.total || 0);
+
+        if (availableCount === 0) break;
+
+        const offset = Math.floor(Math.random() * availableCount);
+        const users = await queryConn(
+            connection,
+            `SELECT id_user, nama_lengkap, id_divisi
+             FROM users
+             WHERE status_terdaftar = 'sudah'
+               AND status_menang = 'belum'${exclusionSQL}
+             ORDER BY id_user
+             LIMIT 1 OFFSET ?
+             FOR UPDATE`,
+            [...excludedIds, offset],
+        );
+
+        if (users[0]) selectedUsers.push(users[0]);
+    }
+
+    return selectedUsers;
+};
+
 // ==========================================
 // EKSEKUSI UTAMA SPIN (DIJALANKAN SAAT "STOP")
 // ==========================================
@@ -77,12 +116,7 @@ const executeSpin = async (id_kelompok) => {
         const totalSisaStok = prizes.reduce((sum, p) => sum + p.stok_sisa, 0);
         if (totalSisaStok === 0) throw new Error("Stok hadiah untuk sesi ini sudah habis!");
         const jumlahPemenang = Math.min(sesi[0].target_jumlah_pemenang, totalSisaStok);
-        const users = await queryConn(connection, 
-            `SELECT id_user, nama_lengkap, id_divisi FROM users 
-                WHERE status_terdaftar = 'sudah' AND status_menang = 'belum' 
-                ORDER BY RAND() LIMIT ?`,
-            [jumlahPemenang]
-        );
+        const users = await pickEligibleUsers(connection, jumlahPemenang);
         if (users.length === 0) throw new Error("Tidak ada peserta yang memenuhi syarat");
         const finalWinnerCount = Math.min(jumlahPemenang, users.length);
         const assignedPrizes = pickPrizesWeighted(prizes, finalWinnerCount);
