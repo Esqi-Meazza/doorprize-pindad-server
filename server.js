@@ -43,6 +43,14 @@ const apiLimiter = rateLimit({
   message: { success: false, data: null, message: 'Too many requests' },
 });
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, data: null, message: 'Too many login attempts' },
+});
+
 app.use('/api', apiLimiter);
 
 const authRoutes = require('./routes/authRoutes');
@@ -50,7 +58,7 @@ const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const spinRoutes = require('./routes/spinRoutes');
 
-app.use('/api/admin/login', apiLimiter);
+app.use('/api/admin/login', authLimiter);
 app.use('/api/admin', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api/admin', verifyAdminToken, adminRoutes);

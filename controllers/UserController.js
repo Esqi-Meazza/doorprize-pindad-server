@@ -63,6 +63,12 @@ const logout = async (req, res) => {
       });
     }
 
+    if (Number(req.user.id_user) !== Number(id_user)) {
+      return res.status(403).json({
+        error: "Token tidak sesuai dengan user"
+      });
+    }
+
     const result = await userService.logoutPegawai(id_user);
 
     res.status(200).json(result);

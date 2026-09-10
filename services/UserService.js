@@ -1,4 +1,5 @@
 const { queryAsync } = require("../config/db");
+const jwt = require("jsonwebtoken");
 
 const getDivisi = async () => {
   return await queryAsync("SELECT * FROM divisi");
@@ -24,7 +25,12 @@ const checkInPegawai = async (nip, tgl_lahir) => {
   return {
     id_user: pegawai.id_user,
     nama_lengkap: pegawai.nama_lengkap,
-    nama_divisi: pegawai.nama_divisi
+    nama_divisi: pegawai.nama_divisi,
+    token: jwt.sign(
+      { id_user: pegawai.id_user, type: "participant" },
+      process.env.JWT_SECRET,
+      { expiresIn: "2h" }
+    )
   };
 };
 

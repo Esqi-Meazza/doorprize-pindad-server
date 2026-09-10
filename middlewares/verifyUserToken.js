@@ -14,6 +14,9 @@ module.exports = function verifyUserToken(req, res, next) {
   try {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.type !== 'participant' || !decoded.id_user) {
+      throw new Error('Invalid participant token');
+    }
     req.user = decoded;
     return next();
   } catch (error) {
