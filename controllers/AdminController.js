@@ -1,4 +1,4 @@
-const adminService = require("../services/AdminService.js");
+const adminService = require('../services/AdminService.js');
 
 const getStats = async (req, res) => {
   try {
@@ -31,15 +31,15 @@ const deletePeserta = async (req, res) => {
   try {
     const id = req.params.id_user;
     if (!/^\d+$/.test(id)) {
-      return res.status(400).json({ success: false, error: "ID peserta tidak valid" });
+      return res.status(400).json({ success: false, error: 'ID peserta tidak valid' });
     }
 
     const result = await adminService.deletePesertaById(id);
     if (result.affectedRows === 0) {
-      return res.status(404).json({ success: false, error: "Peserta tidak ditemukan" });
+      return res.status(404).json({ success: false, error: 'Peserta tidak ditemukan' });
     }
 
-    res.status(200).json({ success: true, message: "Peserta berhasil dihapus" });
+    res.status(200).json({ success: true, message: 'Peserta berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -48,9 +48,14 @@ const deletePeserta = async (req, res) => {
 const resetEvent = async (req, res) => {
   try {
     await adminService.resetAllData();
-    res.status(200).json({ success: true, message: "Database sukses di-reset seperti semula! Siap testing lagi!" });
+    res.status(200).json({
+      success: true,
+      message: 'Database sukses di-reset seperti semula! Siap testing lagi!',
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message || "Gagal melakukan reset database" });
+    res
+      .status(500)
+      .json({ success: false, error: error.message || 'Gagal melakukan reset database' });
   }
 };
 
@@ -81,9 +86,10 @@ const addPeserta = async (req, res) => {
   try {
     const { nip, nama_lengkap, tgl_lahir, id_divisi } = req.body;
     if (!nip || !nama_lengkap || !id_divisi) {
-      return res.status(400).json({ success: false, error: "Semua field wajib diisi!" });
-    }await adminService.createPeserta({ nip, nama_lengkap, tgl_lahir, id_divisi });
-    res.status(201).json({ success: true, message: "Peserta berhasil ditambahkan" });
+      return res.status(400).json({ success: false, error: 'Semua field wajib diisi!' });
+    }
+    await adminService.createPeserta({ nip, nama_lengkap, tgl_lahir, id_divisi });
+    res.status(201).json({ success: true, message: 'Peserta berhasil ditambahkan' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -95,7 +101,7 @@ const editPeserta = async (req, res) => {
     const { nip, nama_lengkap, tgl_lahir, id_divisi, status_terdaftar, status_menang } = req.body;
 
     if (!nip || !nama_lengkap || !id_divisi) {
-      return res.status(400).json({ success: false, error: "NIP, nama, dan divisi wajib diisi" });
+      return res.status(400).json({ success: false, error: 'NIP, nama, dan divisi wajib diisi' });
     }
 
     await adminService.updatePeserta(id_user, {
@@ -107,7 +113,7 @@ const editPeserta = async (req, res) => {
       status_menang,
     });
 
-    res.status(200).json({ success: true, message: "Data peserta berhasil diperbarui" });
+    res.status(200).json({ success: true, message: 'Data peserta berhasil diperbarui' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -116,11 +122,11 @@ const editPeserta = async (req, res) => {
 const resetAllPeserta = async (req, res) => {
   try {
     const { confirm_keyword } = req.body;
-    if (confirm_keyword !== "RESET-SEMUA") {
-      return res.status(400).json({ success: false, error: "Kata kunci konfirmasi salah!" });
+    if (confirm_keyword !== 'RESET-SEMUA') {
+      return res.status(400).json({ success: false, error: 'Kata kunci konfirmasi salah!' });
     }
     await adminService.deleteAllPeserta();
-    res.status(200).json({ success: true, message: "Seluruh data peserta berhasil dihapus" });
+    res.status(200).json({ success: true, message: 'Seluruh data peserta berhasil dihapus' });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -144,9 +150,9 @@ const diskualifikasiPemenang = async (req, res) => {
   try {
     const { id_pemenang } = req.params;
     if (!id_pemenang) {
-      return res.status(400).json({ success: false, error: "ID Pemenang tidak valid" });
+      return res.status(400).json({ success: false, error: 'ID Pemenang tidak valid' });
     }
-    
+
     const result = await adminService.diskualifikasiPemenang(id_pemenang);
     res.status(200).json({ success: true, message: result.message });
   } catch (err) {
@@ -280,5 +286,5 @@ module.exports = {
   getKelompokPaged,
   tambahKelompok,
   editKelompok,
-  hapusKelompok
+  hapusKelompok,
 };

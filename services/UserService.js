@@ -1,8 +1,8 @@
-const { queryAsync } = require("../config/db");
-const jwt = require("jsonwebtoken");
+const { queryAsync } = require('../config/db');
+const jwt = require('jsonwebtoken');
 
 const getDivisi = async () => {
-  return await queryAsync("SELECT * FROM divisi");
+  return await queryAsync('SELECT * FROM divisi');
 };
 
 const checkInPegawai = async (nip, tgl_lahir) => {
@@ -14,23 +14,26 @@ const checkInPegawai = async (nip, tgl_lahir) => {
   `;
   const existing = await queryAsync(sql, [nip, tgl_lahir]);
   if (existing.length === 0) {
-    throw new Error("NIP atau Tanggal Lahir tidak sesuai.");
+    throw new Error('NIP atau Tanggal Lahir tidak sesuai.');
   }
   const pegawai = existing[0];
   if (pegawai.status_terdaftar === 'sudah') {
-    throw new Error("NIP ini sudah digunakan untuk login. Hubungi Panitia jika ini bukan Anda.");
+    throw new Error('NIP ini sudah digunakan untuk login. Hubungi Panitia jika ini bukan Anda.');
   }
-  const updateSql = "UPDATE users SET status_terdaftar = 'sudah' WHERE id_user = ?";
-  await queryAsync(updateSql, [pegawai.id_user]);
+  const updateResult = await queryAsync(
+    "UPDATE users SET status_terdaftar = 'sudah' WHERE id_user = ? AND status_terdaftar = 'belum'",
+    [pegawai.id_user],
+  );
+  if (updateResult.affectedRows !== 1) {
+    throw new Error('NIP ini sudah digunakan untuk login. Hubungi Panitia jika ini bukan Anda.');
+  }
   return {
     id_user: pegawai.id_user,
     nama_lengkap: pegawai.nama_lengkap,
     nama_divisi: pegawai.nama_divisi,
-    token: jwt.sign(
-      { id_user: pegawai.id_user, type: "participant" },
-      process.env.JWT_SECRET,
-      { expiresIn: "2h" }
-    )
+    token: jwt.sign({ id_user: pegawai.id_user, type: 'participant' }, process.env.JWT_SECRET, {
+      expiresIn: '2h',
+    }),
   };
 };
 
@@ -44,7 +47,7 @@ const cariPegawai = async (nip, tgl_lahir) => {
   const existing = await queryAsync(sql, [nip, tgl_lahir]);
 
   if (existing.length === 0) {
-    throw new Error("Data tidak ditemukan");
+    throw new Error('Data tidak ditemukan');
   }
 
   return existing[0];
@@ -52,7 +55,7 @@ const cariPegawai = async (nip, tgl_lahir) => {
 
 const getActiveParticipants = async () => {
   const countResult = await queryAsync(
-    "SELECT COUNT(*) AS total FROM users WHERE status_terdaftar = 'sudah'"
+    "SELECT COUNT(*) AS total FROM users WHERE status_terdaftar = 'sudah'",
   );
   const total = Number(countResult[0]?.total || 0);
   const limit = Math.min(total, 150);
@@ -64,22 +67,22 @@ const getActiveParticipants = async () => {
      WHERE status_terdaftar = 'sudah'
      ORDER BY id_user
      LIMIT ? OFFSET ?`,
-    [limit, offset]
+    [limit, offset],
   );
 };
 
 const logoutPegawai = async (id_user) => {
-    const sql = `
+  const sql = `
         UPDATE users
         SET status_terdaftar = 'belum'
         WHERE id_user = ?
     `;
 
-    await queryAsync(sql, [id_user]);
+  await queryAsync(sql, [id_user]);
 
-    return {
-        message: "Logout berhasil"
-    };
+  return {
+    message: 'Logout berhasil',
+  };
 };
 
 module.exports = { getDivisi, checkInPegawai, cariPegawai, getActiveParticipants, logoutPegawai };

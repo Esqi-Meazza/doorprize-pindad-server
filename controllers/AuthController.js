@@ -1,12 +1,12 @@
-const authService = require("../services/AuthService");
+const authService = require('../services/AuthService');
 
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
     const token = await authService.loginAdmin(username, password);
-    res.json({ message: "Login berhasil", token });
+    res.json({ message: 'Login berhasil', token });
   } catch (error) {
-    res.status(401).json({ error: error.message || "Terjadi kesalahan server" });
+    res.status(401).json({ error: error.message || 'Terjadi kesalahan server' });
   }
 };
 

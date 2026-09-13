@@ -58,10 +58,7 @@ test('participant auth accepts participant token and rejects other token types',
     },
   });
 
-  const participantToken = jwt.sign(
-    { id_user: 42, type: 'participant' },
-    process.env.JWT_SECRET,
-  );
+  const participantToken = jwt.sign({ id_user: 42, type: 'participant' }, process.env.JWT_SECRET);
   const validRequest = { headers: { authorization: `Bearer ${participantToken}` } };
   const validResponse = createResponse();
   let nextCalled = false;
@@ -75,10 +72,8 @@ test('participant auth accepts participant token and rejects other token types',
 
   const adminToken = jwt.sign({ id_admin: 1, type: 'admin' }, process.env.JWT_SECRET);
   const invalidResponse = createResponse();
-  verifyUserToken(
-    { headers: { authorization: `Bearer ${adminToken}` } },
-    invalidResponse,
-    () => assert.fail('admin token must not pass participant middleware'),
+  verifyUserToken({ headers: { authorization: `Bearer ${adminToken}` } }, invalidResponse, () =>
+    assert.fail('admin token must not pass participant middleware'),
   );
 
   assert.equal(invalidResponse.statusCode, 401);

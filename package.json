@@ -4,7 +4,13 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "db:migrate": "node scripts/migrate.js"
+    "db:migrate": "node scripts/migrate.js",
+    "test": "node --test --test-concurrency=1 tests/**/*.test.js",
+    "test:integration": "set RUN_DB_TESTS=1&& node --test tests/integration.test.js",
+    "test:race": "set RUN_DB_TESTS=1&& node --test tests/race.test.js",
+    "format": "prettier --write server.js config/db.js middlewares controllers routes schemas services scripts tests",
+    "format:check": "prettier --check server.js config/db.js middlewares controllers routes schemas services scripts tests .env.example README.md",
+    "audit": "npm audit --audit-level=high"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -20,6 +26,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "prettier": "^3.9.6"
   }
 }

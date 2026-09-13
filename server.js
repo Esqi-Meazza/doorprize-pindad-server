@@ -20,18 +20,23 @@ for (const key of requiredEnv) {
 const PORT = Number(process.env.PORT || 3001);
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
 const app = express();
+let isShuttingDown = false;
 
 app.disable('x-powered-by');
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  }),
+);
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
-app.use(cors({
-  origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:3000'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+app.use(
+  cors({
+    origin: [CLIENT_URL, 'http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+);
 app.use(express.json({ limit: '32kb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -64,7 +69,11 @@ app.use('/api', userRoutes);
 app.use('/api/admin', verifyAdminToken, adminRoutes);
 app.use('/api/spin', verifyAdminToken, spinRoutes);
 
-app.get('/healthz', async (req, res, next) => {
+app.get('/healthz', (req, res) => {
+  res.json({ success: true, data: { status: 'ok' } });
+});
+
+app.get('/readyz', async (req, res, next) => {
   try {
     await queryAsync('SELECT 1');
     res.json({ success: true, data: { status: 'ok' } });
@@ -105,21 +114,31 @@ app.use((req, res) => {
 
 app.use(errorHandler);
 
-const shutdown = async (signal) => {
+const shutdown = async (signal, exit = true) => {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
   console.log(`${signal}: shutting down`);
   io.close();
   server.close(async () => {
     try {
       await db.end();
     } finally {
-      process.exit(0);
+      if (exit) process.exit(0);
     }
   });
 };
 
-process.on('SIGINT', () => shutdown('SIGINT'));
-process.on('SIGTERM', () => shutdown('SIGTERM'));
+const startServer = () => {
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+  return server;
+};
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on port ${PORT}`);
-});
+if (require.main === module) {
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  startServer();
+}
+
+module.exports = { app, server, io, startServer, shutdown };

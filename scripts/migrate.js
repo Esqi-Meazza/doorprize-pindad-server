@@ -2,10 +2,26 @@ require('dotenv').config();
 const { db, queryAsync } = require('../config/db');
 
 const indexes = [
-  ['users', 'idx_users_eligibility', 'CREATE INDEX idx_users_eligibility ON users (status_terdaftar, status_menang)'],
-  ['hadiah', 'idx_hadiah_kelompok_stok', 'CREATE INDEX idx_hadiah_kelompok_stok ON hadiah (id_kelompok, stok_sisa)'],
-  ['pemenang', 'idx_pemenang_kelompok', 'CREATE INDEX idx_pemenang_kelompok ON pemenang (id_kelompok)'],
-  ['kelompok_hadiah', 'idx_kelompok_status_urutan', 'CREATE INDEX idx_kelompok_status_urutan ON kelompok_hadiah (status_sesi, urutan_sesi)'],
+  [
+    'users',
+    'idx_users_eligibility',
+    'CREATE INDEX idx_users_eligibility ON users (status_terdaftar, status_menang)',
+  ],
+  [
+    'hadiah',
+    'idx_hadiah_kelompok_stok',
+    'CREATE INDEX idx_hadiah_kelompok_stok ON hadiah (id_kelompok, stok_sisa)',
+  ],
+  [
+    'pemenang',
+    'idx_pemenang_kelompok',
+    'CREATE INDEX idx_pemenang_kelompok ON pemenang (id_kelompok)',
+  ],
+  [
+    'kelompok_hadiah',
+    'idx_kelompok_status_urutan',
+    'CREATE INDEX idx_kelompok_status_urutan ON kelompok_hadiah (status_sesi, urutan_sesi)',
+  ],
 ];
 
 async function migrate() {
