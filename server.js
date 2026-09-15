@@ -62,11 +62,14 @@ const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const spinRoutes = require('./routes/spinRoutes');
+const spinController = require('./controllers/SpinController');
 
 app.use('/api/admin/login', authLimiter);
 app.use('/api/admin', authRoutes);
 app.use('/api', userRoutes);
 app.use('/api/admin', verifyAdminToken, adminRoutes);
+// Read-only stage state is required by the public display; mutations remain protected below.
+app.get('/api/spin/current', spinController.getCurrentState);
 app.use('/api/spin', verifyAdminToken, spinRoutes);
 
 app.get('/healthz', (req, res) => {

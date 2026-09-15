@@ -26,6 +26,9 @@ test('health and readiness endpoints expose operational status', async () => {
   const ready = await fetch(`${baseUrl}/readyz`);
   assert.equal(ready.status, 200);
   assert.deepEqual((await ready.json()).data, { status: 'ok' });
+
+  const stage = await fetch(`${baseUrl}/api/spin/current`);
+  assert.equal(stage.status, 200);
 });
 
 test('protected CRUD and spin routes reject unauthenticated requests', async () => {
